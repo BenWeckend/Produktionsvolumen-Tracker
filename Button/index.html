@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>FENSTER // SYSTEM v2.0 – Produktionslogger</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>FENSTER // SYSTEM – Produktionslogger</title>
     
     <!-- Chart.js & Font Awesome Icons -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -13,52 +13,64 @@
 </head>
 <body>
 
-<div class="grid">
-    <div class="header">
-        <div class="glitch"><i class="fas fa-window-maximize"></i> FENSTER // PRODUCTION CORE <i class="fas fa-chart-line"></i></div>
-    </div>
-
-    <!-- 3 Haupt-KPIs -->
-    <div class="main-stats">
-        <div class="stat-card today">
-            <div class="stat-label"><i class="fas fa-sun"></i> TODAY OUTPUT</div>
-            <div class="stat-number" id="todayCount">0</div>
+<div class="container">
+    <div class="grid">
+        <div class="header">
+            <div class="title"><i class="fas fa-window-maximize"></i> FENSTER // PRODUCTION CORE <i class="fas fa-chart-line"></i></div>
         </div>
-        <div class="stat-card yesterday">
-            <div class="stat-label"><i class="fas fa-calendar-day"></i> YESTERDAY</div>
-            <div class="stat-number" id="yesterdayCount">0</div>
-        </div>
-        <div class="stat-card month">
-            <div class="stat-label"><i class="fas fa-chart-simple"></i> LAST 30 DAYS</div>
-            <div class="stat-number" id="monthTotal">0</div>
-        </div>
-    </div>
 
-    <!-- Wochen & Monats Liniencharts -->
-    <div class="chart-card">
-        <div class="card-title"><i class="fas fa-chart-line"></i> 7 TAGE TREND</div>
-        <canvas id="weekChart"></canvas>
-    </div>
-    <div class="chart-card">
-        <div class="card-title"><i class="fas fa-calendar-week"></i> 30 TAGE TREND</div>
-        <canvas id="monthChart"></canvas>
-    </div>
-
-    <!-- Stündliches Balkendiagramm (heute) -->
-    <div class="chart-card" style="grid-column: 1/3;">
-        <div class="card-title"><i class="fas fa-chart-bar"></i> STÜNDLICHE PRODUKTION (HEUTE)</div>
-        <canvas id="hourlyChart" style="max-height: 260px;"></canvas>
-    </div>
-
-    <!-- Letzte Aktionen Log -->
-    <div class="log-section">
-        <div class="log-header">
-            <i class="fas fa-history fa-fw"></i> <span>LETZTE FENSTER-AKTIONEN</span>
-            <i class="fas fa-window-maximize" style="margin-left: auto; opacity:0.7;"></i>
+        <!-- 3 Haupt-KPIs -->
+        <div class="main-stats">
+            <div class="stat-card today">
+                <div class="stat-label"><i class="fas fa-sun"></i> TODAY OUTPUT</div>
+                <div class="stat-number" id="todayCount">0</div>
+            </div>
+            <div class="stat-card yesterday">
+                <div class="stat-label"><i class="fas fa-calendar-day"></i> YESTERDAY</div>
+                <div class="stat-number" id="yesterdayCount">0</div>
+            </div>
+            <div class="stat-card month">
+                <div class="stat-label"><i class="fas fa-chart-simple"></i> LAST 30 DAYS</div>
+                <div class="stat-number" id="monthTotal">0</div>
+            </div>
         </div>
-        <ul class="log-list" id="actionLogList">
-            <li style="justify-content: center; opacity:0.6;"><i class="fas fa-database"></i> Keine Einträge – Fenster produzieren mit [ENTER]</li>
-        </ul>
+
+        <!-- Erste 2‑Spalten‑Reihe: Stundenchart + 7‑Tage‑Trend -->
+        <div class="two-columns">
+            <div class="chart-card">
+                <div class="card-title"><i class="fas fa-chart-bar"></i> STÜNDLICHE PRODUKTION (HEUTE)</div>
+                <div class="chart-wrapper">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        
+            <div class="chart-card">
+                <div class="card-title"><i class="fas fa-chart-line"></i> 7 TAGE TREND</div>
+                <div class="chart-wrapper">
+                    <canvas id="weekChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zweite 2‑Spalten‑Reihe: 30‑Tage‑Trend + Aktionslog -->
+        <div class="two-columns">
+            <div class="chart-card">
+                <div class="card-title"><i class="fas fa-calendar-week"></i> 30 TAGE TREND</div>
+                <div class="chart-wrapper">
+                    <canvas id="monthChart"></canvas>
+                </div>
+            </div>
+
+            <div class="log-section">
+                <div class="log-header">
+                    <i class="fas fa-history fa-fw"></i> <span>LETZTE AKTIONEN</span>
+                    <i class="fas fa-window-maximize" style="margin-left: auto; opacity:0.6;"></i>
+                </div>
+                <ul class="log-list" id="actionLogList">
+                    <li style="justify-content: center; opacity:0.6;"><i class="fas fa-database"></i> Keine Einträge – Fenster produzieren mit [ENTER]</li>
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
 

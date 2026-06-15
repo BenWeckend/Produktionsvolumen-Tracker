@@ -1,7 +1,7 @@
 // ----------------------- KERNLOGIK (localStorage mit Zeitstempel) -----------------------
 const STORAGE_KEY = "events";
+const LOG_KEY = "action_log";
 
-// Alle Ereignisse laden (jedes = { t: ISO string mit Uhrzeit })
 function getEvents() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
@@ -14,28 +14,46 @@ function saveEvents(eventsArray) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(eventsArray));
 }
 
-// ----- LOKALE DATUMSFUNKTIONEN (wichtig für korrekte Tageszählung / Zeitzone) -----
+function getActionLog() {
+    const raw = localStorage.getItem(LOG_KEY);
+    if (!raw) return [];
+    try {
+        return JSON.parse(raw);
+    } catch(e) { return []; }
+}
+
+function saveActionLog(logArray) {
+    const trimmed = logArray.slice(0, 50);
+    localStorage.setItem(LOG_KEY, JSON.stringify(trimmed));
+}
+
+function addToActionLog(type, details = {}) {
+    const log = getActionLog();
+    log.unshift({
+        type: type,
+        timestamp: new Date().toISOString(),
+        ...details
+    });
+    saveActionLog(log);
+}
+
 function getLocalDateString(date) {
-    // Gibt YYYY-MM-DD im lokalen Datum zurück (z.B. "2026-06-15")
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
 
-// Für ein gegebenes Event (timestamp) das lokale Datum als YYYY-MM-DD
 function getEventLocalDate(event) {
     const dt = new Date(event.t);
     return getLocalDateString(dt);
 }
 
-// Zählt Events für ein bestimmtes lokales Datum (YYYY-MM-DD)
 function countDay(dateStr) {
     const events = getEvents();
     return events.filter(ev => getEventLocalDate(ev) === dateStr).length;
 }
 
-// Hilfsfunktion: aktuelle lokale Datum-Strings
 function todayLocalStr() {
     return getLocalDateString(new Date());
 }
@@ -46,7 +64,6 @@ function yesterdayLocalStr() {
     return getLocalDateString(d);
 }
 
-// 30-Tage Summe (lokale Tage)
 function totalLast30Days() {
     let total = 0;
     const today = new Date();
@@ -59,7 +76,6 @@ function totalLast30Days() {
     return total;
 }
 
-// ---------- Diagramm Daten: wöchentlich & monatlich ----------
 function buildWeekData() {
     const labels = [];
     const data = [];
@@ -81,16 +97,14 @@ function buildMonthData() {
     for (let i = 29; i >= 0; i--) {
         const d = new Date();
         d.setDate(today.getDate() - i);
-        labels.push(d.getDate());  // Tag des Monats
+        labels.push(d.getDate());
         const dayKey = getLocalDateString(d);
         data.push(countDay(dayKey));
     }
     return { labels, data };
 }
 
-// ********** NEU: Stündliche Daten für HEUTE (Balkendiagramm) **********
 function getHourlyCountsToday() {
-    // returns array mit 24 elementen (stunde 0..23)
     const hourly = new Array(24).fill(0);
     const events = getEvents();
     const todayStr = todayLocalStr();
@@ -98,22 +112,13 @@ function getHourlyCountsToday() {
     for (const ev of events) {
         const evDateStr = getEventLocalDate(ev);
         if (evDateStr === todayStr) {
-            const hour = new Date(ev.t).getHours();  // lokale Stunde (0-23)
+            const hour = new Date(ev.t).getHours();
             if (hour >= 0 && hour < 24) hourly[hour]++;
         }
     }
     return hourly;
 }
 
-// ********** LOG: letzte 10 Aktionen mit Zeit & Datum **********
-function getLastActions(maxCount = 12) {
-    const events = getEvents();
-    // absteigend sortieren (neueste zuerst)
-    const sorted = [...events].sort((a,b) => new Date(b.t) - new Date(a.t));
-    return sorted.slice(0, maxCount);
-}
-
-// Formatiert einen Zeitstempel fürs Log: "Heute 14:32:05" oder "15.06. 09:12"
 function formatLogTime(isoString) {
     const evDate = new Date(isoString);
     const now = new Date();
@@ -130,26 +135,44 @@ function formatLogTime(isoString) {
     } else if (evLocalStr === yesterdayStr) {
         return `Gestern, ${timePart}`;
     } else {
-        // Datum kurz anzeigen
         const day = evDate.getDate();
         const month = evDate.getMonth() + 1;
         return `${day}.${month}. ${timePart}`;
     }
 }
 
-// ---------- Globale Chart-Referenzen ----------
+function getRelativeTime(isoString) {
+    const evDate = new Date(isoString);
+    const diffSeconds = Math.floor((new Date() - evDate) / 1000);
+    
+    if (diffSeconds < 60) return ` (gerade eben)`;
+    if (diffSeconds < 3600) return ` (vor ${Math.floor(diffSeconds/60)} min)`;
+    if (diffSeconds < 86400) return ` (vor ${Math.floor(diffSeconds/3600)} h)`;
+    return ` (vor ${Math.floor(diffSeconds/86400)} Tagen)`;
+}
+
 let weekChart = null;
 let monthChart = null;
 let hourlyChart = null;
 
-// Updaten der 3 Haupt-KPI's
+function setupChartResize(chart) {
+    if (!chart) return;
+    const resizeObserver = new ResizeObserver(() => {
+        if (chart && typeof chart.resize === 'function') {
+            chart.resize();
+        }
+    });
+    if (chart.canvas && chart.canvas.parentElement) {
+        resizeObserver.observe(chart.canvas.parentElement);
+    }
+}
+
 function updateCounters() {
     document.getElementById("todayCount").innerText = countDay(todayLocalStr());
     document.getElementById("yesterdayCount").innerText = countDay(yesterdayLocalStr());
     document.getElementById("monthTotal").innerText = totalLast30Days();
 }
 
-// Wochen- & Monats-Charts rendern
 function renderWeeklyMonthlyCharts() {
     const weekData = buildWeekData();
     const monthData = buildMonthData();
@@ -164,22 +187,30 @@ function renderWeeklyMonthlyCharts() {
             datasets: [{
                 label: "Fenster pro Tag",
                 data: weekData.data,
-                borderColor: "#00f5ff",
-                backgroundColor: "rgba(0,245,255,0.05)",
+                borderColor: "#4f9eff",
+                backgroundColor: "rgba(79,158,255,0.04)",
                 tension: 0.3,
-                pointBackgroundColor: "#ff44ff",
-                pointBorderColor: "#fff",
+                pointBackgroundColor: "#bdd4ff",
+                pointBorderColor: "#ffffff",
                 pointRadius: 4,
+                pointHoverRadius: 6,
                 fill: true
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
-            plugins: { legend: { display: false }, tooltip: { backgroundColor: "#0a0f2a" } },
-            scales: { x: { ticks: { color: "#bbf0ff" } }, y: { ticks: { color: "#bbf0ff" } } }
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: { backgroundColor: "#1e2438", titleColor: "#e0eaff", bodyColor: "#cfdeef" } 
+            },
+            scales: { 
+                x: { ticks: { color: "#9aaec0", maxRotation: 45 } }, 
+                y: { ticks: { color: "#9aaec0", stepSize: 1, beginAtZero: true } } 
+            }
         }
     });
+    setupChartResize(weekChart);
     
     monthChart = new Chart(document.getElementById("monthChart"), {
         type: "line",
@@ -188,22 +219,26 @@ function renderWeeklyMonthlyCharts() {
             datasets: [{
                 label: "Fenster (30 Tage)",
                 data: monthData.data,
-                borderColor: "#ff66ff",
-                backgroundColor: "rgba(255,0,255,0.02)",
+                borderColor: "#88aaff",
+                backgroundColor: "rgba(136,170,255,0.02)",
                 tension: 0.2,
                 pointRadius: 1.8,
-                pointBackgroundColor: "#00ffff"
+                pointBackgroundColor: "#b8ceff"
             }]
         },
         options: {
             responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { x: { ticks: { color: "#aaffff" } }, y: { ticks: { color: "#aaffff" } } }
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: "#1e2438" } },
+            scales: { 
+                x: { ticks: { color: "#9aaec0", maxRotation: 45, autoSkip: true, maxTicksLimit: 15 } }, 
+                y: { ticks: { color: "#9aaec0", stepSize: 1, beginAtZero: true } } 
+            }
         }
     });
+    setupChartResize(monthChart);
 }
 
-// Stündliches Balkendiagramm (heute)
 function renderHourlyBarChart() {
     const hourlyCounts = getHourlyCountsToday();
     const labels = [];
@@ -220,9 +255,9 @@ function renderHourlyBarChart() {
             datasets: [{
                 label: "Fenster pro Stunde",
                 data: hourlyCounts,
-                backgroundColor: "rgba(0, 245, 255, 0.6)",
-                borderColor: "#ff44ff",
-                borderWidth: 1.5,
+                backgroundColor: "rgba(79, 158, 255, 0.65)",
+                borderColor: "#d0e2ff",
+                borderWidth: 1,
                 borderRadius: 6,
                 barPercentage: 0.75,
             }]
@@ -232,48 +267,59 @@ function renderHourlyBarChart() {
             maintainAspectRatio: true,
             plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { label: (ctx) => `${ctx.raw} Fenster` } }
+                tooltip: { callbacks: { label: (ctx) => `${ctx.raw} Fenster` }, backgroundColor: "#1e2438" }
             },
             scales: {
-                x: { ticks: { color: "#00f5ff", maxRotation: 45, autoSkip: true, maxTicksLimit: 12 } },
-                y: { ticks: { color: "#00f5ff", stepSize: 1, beginAtZero: true } }
+                x: { 
+                    ticks: { color: "#9aaec0", maxRotation: 45, autoSkip: true, maxTicksLimit: 12 } 
+                },
+                y: { ticks: { color: "#9aaec0", stepSize: 1, beginAtZero: true } }
             }
         }
     });
+    setupChartResize(hourlyChart);
 }
 
-// Log der letzten Aktionen rendern (mit Icons & Zeit)
 function renderActionLog() {
-    const lastEvents = getLastActions(12);
+    const actionLog = getActionLog();
     const logContainer = document.getElementById("actionLogList");
     if (!logContainer) return;
     
-    if (lastEvents.length === 0) {
-        logContainer.innerHTML = `<li style="justify-content: center; gap: 8px;"><i class="fas fa-info-circle"></i> Noch keine Fenster – drücke [ENTER] oder Button</li>`;
+    if (actionLog.length === 0) {
+        logContainer.innerHTML = `<li style="justify-content: center; gap: 8px;"><i class="fas fa-info-circle"></i> Noch keine Aktionen – drücke [ENTER] oder Button</li>`;
         return;
     }
     
-    const itemsHtml = lastEvents.map(ev => {
-        const timeLabel = formatLogTime(ev.t);
-        // zusätzlich: relative Zeit (vor x min) ist bonus
-        let relative = "";
-        const evDate = new Date(ev.t);
-        const diffMinutes = Math.floor((new Date() - evDate) / 60000);
-        if (diffMinutes < 60 && diffMinutes > 0) relative = ` (vor ${diffMinutes} min)`;
-        else if (diffMinutes === 0) relative = ` (gerade eben)`;
-        else if (diffMinutes >= 60 && diffMinutes < 1440) relative = ` (vor ${Math.floor(diffMinutes/60)}h)`;
+    const itemsHtml = actionLog.map(entry => {
+        const timeLabel = formatLogTime(entry.timestamp);
+        const relativeTime = getRelativeTime(entry.timestamp);
         
-        return `<li>
-                    <i class="fas fa-window-maximize log-icon"></i>
-                    <span class="log-time">${timeLabel}</span>
-                    <span class="log-text">Fenster produziert <i class="fas fa-check-circle" style="color:#88ffaa;"></i> ${relative}</span>
-                </li>`;
+        if (entry.type === "add") {
+            return `<li>
+                        <i class="fas fa-window-maximize log-icon"></i>
+                        <span class="log-time">${timeLabel}</span>
+                        <span class="log-text">
+                            <i class="fas fa-plus-circle" style="color:#7cb5ff;"></i> 
+                            Fenster produziert ${relativeTime}
+                        </span>
+                    </li>`;
+        } else if (entry.type === "undo") {
+            const undoText = entry.count ? `${entry.count} Fenster rückgängig` : "Fenster rückgängig";
+            return `<li>
+                        <i class="fas fa-undo-alt log-undo-icon"></i>
+                        <span class="log-time">${timeLabel}</span>
+                        <span class="log-text">
+                            <i class="fas fa-trash-alt" style="color:#e0a56b;"></i> 
+                            UNDO: ${undoText} ${relativeTime}
+                        </span>
+                    </li>`;
+        }
+        return "";
     }).join('');
     
     logContainer.innerHTML = itemsHtml;
 }
 
-// ---------- MASTER UPDATE: alles neu zeichnen ----------
 function fullUpdate() {
     updateCounters();
     renderWeeklyMonthlyCharts();
@@ -281,14 +327,14 @@ function fullUpdate() {
     renderActionLog();
 }
 
-// ---------- CORE OPERATIONEN ----------
 function addWindow() {
     const events = getEvents();
-    const newEvent = { t: new Date().toISOString() }; // voller Zeitstempel in UTC (wird lokal ausgewertet)
+    const newEvent = { t: new Date().toISOString() };
     events.push(newEvent);
     saveEvents(events);
+    addToActionLog("add", { count: 1 });
     fullUpdate();
-    // kleine haptische Rückmeldung via kurzem style-blitz
+    
     const btn = document.getElementById("addBtn");
     btn.style.transform = "scale(0.97)";
     setTimeout(() => { btn.style.transform = ""; }, 120);
@@ -296,45 +342,57 @@ function addWindow() {
 
 function undoLastWindow() {
     const events = getEvents();
-    if (events.length === 0) return;
-    events.pop();
+    if (events.length === 0) {
+        const undoBtn = document.getElementById("undoBtn");
+        undoBtn.style.transform = "scale(0.95)";
+        undoBtn.style.borderColor = "#b54747";
+        setTimeout(() => { 
+            undoBtn.style.transform = ""; 
+            undoBtn.style.borderColor = "#4f6b8a";
+        }, 200);
+        return;
+    }
+    
+    const removedEvent = events.pop();
     saveEvents(events);
+    addToActionLog("undo", { count: 1, removedTimestamp: removedEvent.t });
     fullUpdate();
+    
     const undoBtn = document.getElementById("undoBtn");
     undoBtn.style.transform = "scale(0.97)";
     setTimeout(() => { undoBtn.style.transform = ""; }, 120);
 }
 
-// Keyboard Support: ENTER fügt Fenster hinzu
 document.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         addWindow();
     }
-    // optional: Strg+Z für Undo (komfort)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
         undoLastWindow();
     }
 });
 
-// Buttons verbinden
 document.getElementById("addBtn").addEventListener("click", addWindow);
 document.getElementById("undoBtn").addEventListener("click", undoLastWindow);
 
-// Initialer Aufruf
+window.addEventListener('resize', () => {
+    if (weekChart) weekChart.resize();
+    if (monthChart) monthChart.resize();
+    if (hourlyChart) hourlyChart.resize();
+});
+
 fullUpdate();
 
-// Bei localStorage-Änderungen in anderen Tabs ebenfalls aktualisieren
 window.addEventListener("storage", (e) => {
-    if (e.key === STORAGE_KEY) {
+    if (e.key === STORAGE_KEY || e.key === LOG_KEY) {
         fullUpdate();
     }
 });
 
-// Aktualisierung beim Sichtbarkeitswechsel
 document.addEventListener("visibilitychange", () => {
     if (!document.hidden) fullUpdate();
 });
 
-console.log("🪟 FENSTER SYSTEM AKTIV | Lokale Zeitzonen-Auswertung | Stunden-BarChart + Log");
+console.log("🪟 FENSTER SYSTEM AKTIV | Dunkles, analytisches Layout | Today-Zahl hervorgehoben");
