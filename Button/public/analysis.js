@@ -17,6 +17,7 @@ const chartDefaults = {
 
 const weekdayLabels = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const charts = [];
+let selectedReportRange = "month";
 
 function setStatus(message, isError = false) {
     const status = document.getElementById("analysisStatus");
@@ -52,6 +53,124 @@ function formatDateTime(value) {
         hour: "2-digit",
         minute: "2-digit"
     });
+}
+
+function toDateInputValue(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function shiftDays(date, days) {
+    const copy = new Date(date);
+    copy.setDate(copy.getDate() + days);
+    return copy;
+}
+
+function setReportStatus(message, isError = false) {
+    const status = document.getElementById("reportStatus");
+    if (!status) return;
+    status.hidden = false;
+    status.classList.toggle("error", isError);
+    status.innerHTML = isError
+        ? `<i class="fas fa-triangle-exclamation"></i> ${escapeHtml(message)}`
+        : `<i class="fas fa-circle-info"></i> ${escapeHtml(message)}`;
+}
+
+function setSelectedRange(range) {
+    selectedReportRange = range;
+    document.querySelectorAll(".range-btn").forEach(button => {
+        button.classList.toggle("active", button.dataset.range === range);
+    });
+
+    const startInput = document.getElementById("reportStartDate");
+    const endInput = document.getElementById("reportEndDate");
+    const today = new Date();
+
+    if (range === "week") {
+        const day = today.getDay();
+        const mondayOffset = day === 0 ? -6 : 1 - day;
+        startInput.value = toDateInputValue(shiftDays(today, mondayOffset));
+        endInput.value = toDateInputValue(today);
+    } else if (range === "month") {
+        startInput.value = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
+        endInput.value = toDateInputValue(today);
+    } else if (range === "year") {
+        startInput.value = toDateInputValue(new Date(today.getFullYear(), 0, 1));
+        endInput.value = toDateInputValue(today);
+    } else if (range === "all") {
+        startInput.value = "";
+        endInput.value = "";
+    }
+}
+
+function setupReportControls() {
+    document.querySelectorAll(".range-btn").forEach(button => {
+        button.addEventListener("click", () => setSelectedRange(button.dataset.range));
+    });
+
+    ["reportStartDate", "reportEndDate"].forEach(id => {
+        const input = document.getElementById(id);
+        input.addEventListener("change", () => {
+            selectedReportRange = "custom";
+            document.querySelectorAll(".range-btn").forEach(button => button.classList.remove("active"));
+        });
+    });
+
+    document.getElementById("createPdfBtn").addEventListener("click", createPdfReport);
+    setSelectedRange("month");
+}
+
+async function createPdfReport() {
+    const button = document.getElementById("createPdfBtn");
+    const startDate = document.getElementById("reportStartDate").value;
+    const endDate = document.getElementById("reportEndDate").value;
+    const payload = selectedReportRange === "all"
+        ? { preset: "all" }
+        : selectedReportRange === "custom"
+            ? { preset: "custom", startDate, endDate }
+            : { preset: selectedReportRange };
+
+    if (payload.preset === "custom" && (!startDate || !endDate)) {
+        setReportStatus("Bitte Start- und Enddatum fuer den Auswertungszeitraum angeben.", true);
+        return;
+    }
+
+    try {
+        button.disabled = true;
+        setReportStatus("PDF wird serverseitig erstellt ...");
+
+        const response = await fetch("/api/reports/window-events/pdf", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.detail || error.error || "PDF konnte nicht erstellt werden.");
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const disposition = response.headers.get("Content-Disposition") || "";
+        const match = disposition.match(/filename="([^"]+)"/);
+        link.href = url;
+        link.download = match ? match[1] : "fenster-auswertung.pdf";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+
+        setReportStatus("PDF-Auswertung wurde erstellt.");
+    } catch (error) {
+        console.error("PDF-Fehler:", error);
+        setReportStatus(error.message, true);
+    } finally {
+        button.disabled = false;
+    }
 }
 
 function updateSummary(data) {
@@ -255,3 +374,4 @@ window.addEventListener("resize", () => {
 });
 
 loadAnalysis();
+setupReportControls();

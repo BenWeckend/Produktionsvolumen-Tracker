@@ -44,6 +44,30 @@
 
             <div class="analysis-meta" id="analysisMeta"></div>
 
+            <div class="chart-card report-panel">
+                <div class="card-title"><i class="fas fa-file-pdf"></i> PDF-AUSWERTUNG ERSTELLEN</div>
+                <div class="report-controls">
+                    <div class="quick-range" role="group" aria-label="Schnelloptionen">
+                        <button class="range-btn" data-range="week" type="button">Diese Woche</button>
+                        <button class="range-btn" data-range="month" type="button">Dieser Monat</button>
+                        <button class="range-btn" data-range="year" type="button">Dieses Jahr</button>
+                        <button class="range-btn" data-range="all" type="button">Alle Daten</button>
+                    </div>
+                    <div class="date-range">
+                        <label>
+                            Von
+                            <input id="reportStartDate" type="date">
+                        </label>
+                        <label>
+                            Bis
+                            <input id="reportEndDate" type="date">
+                        </label>
+                        <button id="createPdfBtn" type="button"><i class="fas fa-download"></i> PDF-Auswertung erstellen</button>
+                    </div>
+                </div>
+                <div id="reportStatus" class="report-status" hidden></div>
+            </div>
+
             <div class="two-columns">
                 <div class="chart-card">
                     <div class="card-title"><i class="fas fa-chart-line"></i> EVENTS PRO TAG</div>

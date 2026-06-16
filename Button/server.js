@@ -2,6 +2,8 @@ const express = require("express");
 const Database = require("better-sqlite3");
 const path = require("path");
 const fs = require("fs");
+const PDFDocument = require("pdfkit");
+const { createWindowEventsReportPdf } = require("./report");
 
 const app = express();
 const PORT = 3000;
@@ -164,20 +166,100 @@ function isNumericColumn(column) {
     return type.includes("INT") || type.includes("REAL") || type.includes("NUM") || type.includes("DEC") || type.includes("DOUBLE") || type.includes("FLOAT");
 }
 
-function buildTemporalAnalysis(tableName, timestampColumn) {
+function localDateString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function addDays(date, days) {
+    const copy = new Date(date);
+    copy.setDate(copy.getDate() + days);
+    return copy;
+}
+
+function isValidDateOnly(value) {
+    return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
+}
+
+function resolveAnalysisPeriod(input = {}) {
+    const preset = input.preset || input.range || "all";
+    const today = new Date();
+    let startDate = input.startDate;
+    let endDate = input.endDate;
+    let label = "Alle Daten";
+
+    if (preset === "week") {
+        const day = today.getDay();
+        const mondayOffset = day === 0 ? -6 : 1 - day;
+        startDate = localDateString(addDays(today, mondayOffset));
+        endDate = localDateString(today);
+        label = "Diese Woche";
+    } else if (preset === "month") {
+        startDate = localDateString(new Date(today.getFullYear(), today.getMonth(), 1));
+        endDate = localDateString(today);
+        label = "Dieser Monat";
+    } else if (preset === "year") {
+        startDate = localDateString(new Date(today.getFullYear(), 0, 1));
+        endDate = localDateString(today);
+        label = "Dieses Jahr";
+    } else if (preset === "all") {
+        startDate = null;
+        endDate = null;
+    } else if (preset === "custom") {
+        label = `${startDate || "Start"} bis ${endDate || "Ende"}`;
+    } else {
+        throw new Error("Unbekannte Zeitraum-Option.");
+    }
+
+    if (preset !== "all") {
+        if (!isValidDateOnly(startDate) || !isValidDateOnly(endDate)) {
+            throw new Error("Bitte gueltige Start- und Enddaten im Format YYYY-MM-DD angeben.");
+        }
+        if (startDate > endDate) {
+            throw new Error("Das Startdatum darf nicht nach dem Enddatum liegen.");
+        }
+    }
+
+    return { preset, startDate, endDate, label };
+}
+
+function buildDateWhere(timestampColumn, period = {}) {
+    if (!timestampColumn) {
+        return { where: "1 = 1", params: {} };
+    }
+
+    const col = quoteIdentifier(timestampColumn.name);
+    const clauses = [`${col} IS NOT NULL`, `datetime(${col}) IS NOT NULL`];
+    const params = {};
+
+    if (period.startDate) {
+        clauses.push(`DATE(${col}) >= @startDate`);
+        params.startDate = period.startDate;
+    }
+    if (period.endDate) {
+        clauses.push(`DATE(${col}) <= @endDate`);
+        params.endDate = period.endDate;
+    }
+
+    return { where: clauses.join(" AND "), params };
+}
+
+function buildTemporalAnalysis(tableName, timestampColumn, period = {}) {
     if (!timestampColumn) return null;
 
     const table = quoteIdentifier(tableName);
     const col = quoteIdentifier(timestampColumn.name);
-    const validDateWhere = `${col} IS NOT NULL AND datetime(${col}) IS NOT NULL`;
+    const { where, params } = buildDateWhere(timestampColumn, period);
 
     const byDay = db.prepare(`
         SELECT DATE(${col}) AS label, COUNT(*) AS count
         FROM ${table}
-        WHERE ${validDateWhere}
+        WHERE ${where}
         GROUP BY DATE(${col})
         ORDER BY label
-    `).all();
+    `).all(params);
 
     let runningTotal = 0;
     const cumulativeByDay = byDay.map(row => {
@@ -193,37 +275,38 @@ function buildTemporalAnalysis(tableName, timestampColumn) {
                 MAX(datetime(${col})) AS end,
                 COUNT(${col}) AS count
             FROM ${table}
-            WHERE ${validDateWhere}
-        `).get(),
+            WHERE ${where}
+        `).get(params),
         byDay,
         cumulativeByDay,
         byMonth: db.prepare(`
             SELECT strftime('%Y-%m', ${col}) AS label, COUNT(*) AS count
             FROM ${table}
-            WHERE ${validDateWhere}
+            WHERE ${where}
             GROUP BY strftime('%Y-%m', ${col})
             ORDER BY label
-        `).all(),
+        `).all(params),
         byHour: db.prepare(`
             SELECT strftime('%H', ${col}) AS label, COUNT(*) AS count
             FROM ${table}
-            WHERE ${validDateWhere}
+            WHERE ${where}
             GROUP BY strftime('%H', ${col})
             ORDER BY label
-        `).all(),
+        `).all(params),
         byWeekday: db.prepare(`
             SELECT strftime('%w', ${col}) AS weekday, COUNT(*) AS count
             FROM ${table}
-            WHERE ${validDateWhere}
+            WHERE ${where}
             GROUP BY strftime('%w', ${col})
             ORDER BY weekday
-        `).all()
+        `).all(params)
     };
 }
 
-function buildCategoricalDistributions(tableName, columns, timestampColumn) {
+function buildCategoricalDistributions(tableName, columns, timestampColumn, period = {}) {
     const table = quoteIdentifier(tableName);
     const timestampName = timestampColumn ? timestampColumn.name : null;
+    const { where, params } = buildDateWhere(timestampColumn, period);
 
     return columns
         .filter(column => column.name !== timestampName)
@@ -236,7 +319,7 @@ function buildCategoricalDistributions(tableName, columns, timestampColumn) {
         })
         .map(column => {
             const col = quoteIdentifier(column.name);
-            const distinct = db.prepare(`SELECT COUNT(DISTINCT ${col}) AS count FROM ${table} WHERE ${col} IS NOT NULL`).get().count;
+            const distinct = db.prepare(`SELECT COUNT(DISTINCT ${col}) AS count FROM ${table} WHERE ${col} IS NOT NULL AND ${where}`).get(params).count;
             if (distinct === 0 || distinct > 30) return null;
 
             return {
@@ -244,18 +327,19 @@ function buildCategoricalDistributions(tableName, columns, timestampColumn) {
                 values: db.prepare(`
                     SELECT CAST(${col} AS TEXT) AS label, COUNT(*) AS count
                     FROM ${table}
-                    WHERE ${col} IS NOT NULL
+                    WHERE ${col} IS NOT NULL AND ${where}
                     GROUP BY ${col}
                     ORDER BY count DESC, label
                     LIMIT 20
-                `).all()
+                `).all(params)
             };
         })
         .filter(Boolean);
 }
 
-function buildNumericSummaries(tableName, columns) {
+function buildNumericSummaries(tableName, columns, timestampColumn, period = {}) {
     const table = quoteIdentifier(tableName);
+    const { where, params } = buildDateWhere(timestampColumn, period);
 
     return columns
         .filter(column => isNumericColumn(column) && column.name.toLowerCase() !== "id" && !column.name.toLowerCase().endsWith("_id"))
@@ -270,10 +354,64 @@ function buildNumericSummaries(tableName, columns) {
                         AVG(${col}) AS avg,
                         COUNT(${col}) AS count
                     FROM ${table}
-                    WHERE ${col} IS NOT NULL
-                `).get()
+                    WHERE ${col} IS NOT NULL AND ${where}
+                `).get(params)
             };
         });
+}
+
+function getWindowEventsAnalysis(period = {}) {
+    const tableName = findTableName("Window_events") || findTableName("window_events");
+    if (!tableName) {
+        const error = new Error("Tabelle Window_events wurde in fenster.db nicht gefunden.");
+        error.statusCode = 404;
+        error.code = "TABLE_NOT_FOUND";
+        throw error;
+    }
+
+    const table = quoteIdentifier(tableName);
+    const columns = getTableColumns(tableName);
+    if (columns.length === 0) {
+        const error = new Error(`Tabelle ${tableName} enthaelt keine lesbaren Spalten.`);
+        error.statusCode = 500;
+        error.code = "NO_COLUMNS";
+        throw error;
+    }
+
+    const timestampColumn = pickTimestampColumn(columns);
+    if ((period.startDate || period.endDate) && !timestampColumn) {
+        const error = new Error("Keine Zeitstempelspalte in Window_events erkannt. Zeitraumfilterung ist nicht moeglich.");
+        error.statusCode = 400;
+        error.code = "TIMESTAMP_COLUMN_NOT_FOUND";
+        throw error;
+    }
+
+    const orderColumn = timestampColumn ? quoteIdentifier(timestampColumn.name) : "rowid";
+    const { where, params } = buildDateWhere(timestampColumn, period);
+    const rowCount = db.prepare(`SELECT COUNT(*) AS count FROM ${table} WHERE ${where}`).get(params).count;
+
+    return {
+        tableName,
+        period,
+        rowCount,
+        timestampColumn: timestampColumn ? timestampColumn.name : null,
+        columns: columns.map(column => ({
+            name: column.name,
+            type: column.type || "UNKNOWN",
+            required: Boolean(column.notnull),
+            primaryKey: Boolean(column.pk)
+        })),
+        temporal: buildTemporalAnalysis(tableName, timestampColumn, period),
+        categoricalDistributions: buildCategoricalDistributions(tableName, columns, timestampColumn, period),
+        numericSummaries: buildNumericSummaries(tableName, columns, timestampColumn, period),
+        latestRows: db.prepare(`
+            SELECT *
+            FROM ${table}
+            WHERE ${where}
+            ORDER BY ${orderColumn} DESC
+            LIMIT 20
+        `).all(params)
+    };
 }
 
 // --- API-Endpunkte ---
@@ -329,53 +467,55 @@ app.get("/api/dashboard", (req, res) => {
 
 app.get("/api/analysis/window-events", (req, res) => {
     try {
-        const tableName = findTableName("Window_events") || findTableName("window_events");
-        if (!tableName) {
-            return res.status(404).json({
-                error: "Tabelle Window_events wurde in fenster.db nicht gefunden.",
-                code: "TABLE_NOT_FOUND"
-            });
-        }
-
-        const table = quoteIdentifier(tableName);
-        const columns = getTableColumns(tableName);
-        if (columns.length === 0) {
-            return res.status(500).json({
-                error: `Tabelle ${tableName} enthaelt keine lesbaren Spalten.`,
-                code: "NO_COLUMNS"
-            });
-        }
-
-        const timestampColumn = pickTimestampColumn(columns);
-        const orderColumn = timestampColumn ? quoteIdentifier(timestampColumn.name) : "rowid";
-        const totalRows = db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
-
-        res.json({
-            tableName,
-            rowCount: totalRows,
-            columns: columns.map(column => ({
-                name: column.name,
-                type: column.type || "UNKNOWN",
-                required: Boolean(column.notnull),
-                primaryKey: Boolean(column.pk)
-            })),
-            temporal: buildTemporalAnalysis(tableName, timestampColumn),
-            categoricalDistributions: buildCategoricalDistributions(tableName, columns, timestampColumn),
-            numericSummaries: buildNumericSummaries(tableName, columns),
-            latestRows: db.prepare(`
-                SELECT *
-                FROM ${table}
-                ORDER BY ${orderColumn} DESC
-                LIMIT 20
-            `).all()
-        });
+        const period = resolveAnalysisPeriod(req.query);
+        res.json(getWindowEventsAnalysis(period));
     } catch (error) {
         console.error("Analyse-Fehler:", error);
-        res.status(500).json({
+        res.status(error.statusCode || 500).json({
             error: "Analyse konnte nicht aus der Datenbank geladen werden.",
             detail: error.message,
-            code: "ANALYSIS_FAILED"
+            code: error.code || "ANALYSIS_FAILED"
         });
+    }
+});
+
+app.post("/api/reports/window-events/pdf", (req, res) => {
+    try {
+        const period = resolveAnalysisPeriod(req.body || {});
+        const analysis = getWindowEventsAnalysis(period);
+
+        if (!analysis.rowCount) {
+            return res.status(404).json({
+                error: "Im gewaehlten Zeitraum wurden keine Daten gefunden.",
+                code: "EMPTY_PERIOD"
+            });
+        }
+
+        const safeRange = `${period.startDate || "alle"}_${period.endDate || "daten"}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+        const fileName = `fenster-auswertung-${safeRange}.pdf`;
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
+        const doc = new PDFDocument({
+            size: "A4",
+            margin: 44,
+            info: {
+                Title: "Fenster Auswertung",
+                Author: "Fenster Dashboard"
+            }
+        });
+        doc.pipe(res);
+        createWindowEventsReportPdf(doc, analysis, period);
+    } catch (error) {
+        console.error("PDF-Report-Fehler:", error);
+        if (!res.headersSent) {
+            res.status(error.statusCode || 500).json({
+                error: "PDF-Auswertung konnte nicht erstellt werden.",
+                detail: error.message,
+                code: error.code || "PDF_REPORT_FAILED"
+            });
+        }
     }
 });
 
