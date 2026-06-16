@@ -6,9 +6,9 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(process.cwd(), "public")));
 
-const db = new Database("fenster.db");
+const db = new Database(path.join(process.cwd(), "fenster.db"));
 
 // --- Tabellen ---
 db.exec(`
