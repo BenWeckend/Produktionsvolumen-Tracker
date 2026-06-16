@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>FENSTER // ANALYSE</title>
+
+    <script src="/vendor/chartjs/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="analysis-page">
+
+<div class="container">
+    <div class="grid">
+        <div class="header analysis-header">
+            <a class="button-link back-link" href="index.html"><i class="fas fa-arrow-left"></i> DASHBOARD</a>
+            <div class="title"><i class="fas fa-chart-pie"></i> FENSTER // AUSWERTUNG</div>
+        </div>
+
+        <div id="analysisStatus" class="status-panel">
+            <i class="fas fa-spinner fa-spin"></i> Analyse wird geladen
+        </div>
+
+        <div id="analysisContent" class="analysis-content" hidden>
+            <div class="main-stats compact-stats">
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fas fa-database"></i> EVENTS</div>
+                    <div class="stat-number analysis-number" id="analysisTotal">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fas fa-calendar-day"></i> AKTIVE TAGE</div>
+                    <div class="stat-number analysis-number" id="analysisDays">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fas fa-divide"></i> AVG/TAG</div>
+                    <div class="stat-number analysis-number" id="analysisAvg">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fas fa-columns"></i> SPALTEN</div>
+                    <div class="stat-number analysis-number" id="analysisColumns">0</div>
+                </div>
+            </div>
+
+            <div class="analysis-meta" id="analysisMeta"></div>
+
+            <div class="two-columns">
+                <div class="chart-card">
+                    <div class="card-title"><i class="fas fa-chart-line"></i> EVENTS PRO TAG</div>
+                    <div class="chart-wrapper large-chart">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="card-title"><i class="fas fa-chart-area"></i> KUMULIERT</div>
+                    <div class="chart-wrapper large-chart">
+                        <canvas id="cumulativeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="three-columns">
+                <div class="chart-card">
+                    <div class="card-title"><i class="fas fa-clock"></i> STUNDEN</div>
+                    <div class="chart-wrapper medium-chart">
+                        <canvas id="hourChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="card-title"><i class="fas fa-calendar-week"></i> WOCHENTAGE</div>
+                    <div class="chart-wrapper medium-chart">
+                        <canvas id="weekdayChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="card-title"><i class="fas fa-calendar-alt"></i> MONATE</div>
+                    <div class="chart-wrapper medium-chart">
+                        <canvas id="monthAnalysisChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dynamicCharts" class="two-columns dynamic-charts"></div>
+
+            <div class="two-columns">
+                <div class="chart-card table-card">
+                    <div class="card-title"><i class="fas fa-table"></i> SPALTEN</div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Typ</th>
+                                    <th>Pflicht</th>
+                                    <th>PK</th>
+                                </tr>
+                            </thead>
+                            <tbody id="columnsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="chart-card table-card">
+                    <div class="card-title"><i class="fas fa-list"></i> LETZTE EVENTS</div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead id="latestHead"></thead>
+                            <tbody id="latestRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="analysis.js"></script>
+</body>
+</html>
