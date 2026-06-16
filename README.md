@@ -17,3 +17,5 @@ Logik:
     - Für die letzten 30 Tage
     - Für die letzten 90 Tage
     - Für alle Daten
+
+<img width="1920" height="1080" alt="Bildschirmfoto vom 2026-06-16 09-46-47" src="https://github.com/user-attachments/assets/472baa4d-dce7-4485-83bf-fcecfd97bb45" />
