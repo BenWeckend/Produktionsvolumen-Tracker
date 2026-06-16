@@ -83,14 +83,15 @@ body {
 
 /* TODAY deutlich größer */
 .today .stat-number {
-    font-size: clamp(3rem, 12vw, 6rem);
+    font-size: clamp(5rem, 20vw, 16rem);
     font-weight: 900;
     color: #ffffff;
     text-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
-.yesterday .stat-number,
-.month .stat-number {
+.week .stat-number,
+.month .stat-number,
+.year .stat-number {
     font-size: clamp(2rem, 8vw, 3.5rem);
     font-weight: 600;
     color: #bdd4ff;

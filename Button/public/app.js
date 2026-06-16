@@ -81,8 +81,9 @@ function setupChartResize(chart) {
 
 function updateCounters(data) {
     document.getElementById("todayCount").innerText = data.today || 0;
-    document.getElementById("yesterdayCount").innerText = data.yesterday || 0;
+    document.getElementById("weekTotal").innerText = data.weekTotal || 0;
     document.getElementById("monthTotal").innerText = data.monthTotal || 0;
+    document.getElementById("yearTotal").innerText = data.yearTotal || 0;
 }
 
 function renderWeeklyMonthlyCharts(data) {

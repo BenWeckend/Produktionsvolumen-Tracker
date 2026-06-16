@@ -80,9 +80,27 @@ const weekTrendStmt = db.prepare(`
         DATE(created_at) AS day,
         COUNT(*) AS count
     FROM window_events
-    WHERE DATE(created_at) >= DATE('now','-7 day')
+    WHERE DATE(created_at) >= DATE('now','-7 day', 'localtime')
     GROUP BY DATE(created_at)
     ORDER BY day
+`);
+
+const weekTotalStmt = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM window_events
+    WHERE DATE(created_at) >= DATE('now', '-6 days', 'weekday 1')
+`);
+
+const monthTotalStmt = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM window_events
+    WHERE DATE(created_at) >= DATE('now','start of month','localtime')
+`);
+
+const yearTotalStmt = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM window_events
+    WHERE DATE(created_at) >= DATE('now','start of year','localtime')
 `);
 
 const monthTrendStmt = db.prepare(`
@@ -90,15 +108,9 @@ const monthTrendStmt = db.prepare(`
         DATE(created_at) AS day,
         COUNT(*) AS count
     FROM window_events
-    WHERE DATE(created_at) >= DATE('now','-30 day')
+    WHERE DATE(created_at) >= DATE('now','-30 day', 'localtime')
     GROUP BY DATE(created_at)
     ORDER BY day
-`);
-
-const monthTotalStmt = db.prepare(`
-    SELECT COUNT(*) AS count
-    FROM window_events
-    WHERE DATE(created_at) >= DATE('now','-30 day')
 `);
 
 const hourlyStmt = db.prepare(`
@@ -152,11 +164,13 @@ app.get("/api/dashboard", (req, res) => {
     res.json({
         today: todayStmt.get().count,
         yesterday: yesterdayStmt.get().count,
-        monthTotal: monthTotalStmt.get().count,
         weekTrend: weekTrendStmt.all(),
         monthTrend: monthTrendStmt.all(),
         hourly: hourlyStmt.all(),
-        actionLog: getActionLog.all()
+        actionLog: getActionLog.all(),
+        monthTotal: monthTotalStmt.get().count,
+        yearTotal: yearTotalStmt.get().count,
+        weekTotal: weekTotalStmt.get().count
     });
 });
 
