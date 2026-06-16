@@ -1,4 +1,63 @@
-# Fenster
+# Fenster Dashboard
+
+Das Projekt enthaelt eine lokale Node.js/Express-Dashboard-App im Ordner `Button`.
+Die Weboberflaeche wird aus `Button/public` ausgeliefert, die API und SQLite-Logik liegen in `Button/server.js`.
+Fuer den Desktop-Betrieb startet Electron denselben lokalen Server automatisch auf einem freien Port und oeffnet das Dashboard im App-Fenster. Diese Variante ist pragmatisch, weil die bestehende API- und Dashboard-Logik unveraendert weiterverwendet wird.
+
+## Lokal als Node.js-App starten
+
+```bash
+cd Button
+npm install
+npm start
+```
+
+Danach ist das Dashboard unter `http://127.0.0.1:3000` erreichbar.
+
+## Electron-App lokal testen
+
+```bash
+cd Button
+npm install
+npm run dev
+```
+
+Falls native Module nach einem Electron- oder Node-Wechsel neu gebaut werden muessen:
+
+```bash
+cd Button
+npm run rebuild:electron
+```
+
+## Windows-Build erzeugen
+
+```bash
+cd Button
+npm install
+npm run build
+```
+
+Die Windows-Artefakte werden in `Button/dist` erzeugt. Konfiguriert sind ein portables `.exe` und ein NSIS-Installer. Fuer einen entpackten Testordner kann stattdessen `npm run build:dir` genutzt werden.
+
+`electron-builder` baut native Module wie `better-sqlite3` fuer Electron um. Wenn danach wieder der reine Node.js-Server gestartet werden soll, kann das lokale Native-Modul wieder fuer Node gebaut werden:
+
+```bash
+cd Button
+npm run rebuild:node
+```
+
+## Datenbank
+
+Im lokalen Node.js-Betrieb nutzt die App standardmaessig `Button/fenster.db`.
+In der Electron-App wird beim ersten Start eine Kopie der mitgelieferten Datenbank in den beschreibbaren Electron-Datenordner gelegt:
+
+```text
+%APPDATA%\Fenster Dashboard\fenster.db
+```
+
+Der Pfad kann fuer Spezialfaelle ueber die Umgebungsvariable `FENSTER_DB_PATH` ueberschrieben werden. Dadurch schreibt die gepackte App nicht in das Installationsverzeichnis und bleibt ohne absolute Projektpfade lauffaehig.
+
+## Projektidee
 
 Das Ziel ist für ein Fensterbauunternehmen einen Tracker zu bauen, welcher die Anzahl an produzierten Fenster loggt.
 
@@ -17,6 +76,8 @@ Logik:
     - Für die letzten 30 Tage
     - Für die letzten 90 Tage
     - Für alle Daten
+
+## Bisheriger PM2-Betrieb
 
 **Bringup:**
 ```

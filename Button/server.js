@@ -6,15 +6,20 @@ const PDFDocument = require("pdfkit");
 const { createWindowEventsReportPdf } = require("./report");
 
 const app = express();
-const PORT = 3000;
+const DEFAULT_PORT = Number(process.env.PORT || 3000);
+let server = null;
 
 app.use(express.json());
 app.use("/vendor/chartjs", express.static(path.join(__dirname, "node_modules", "chart.js", "dist")));
 app.use(express.static(path.join(__dirname, "public")));
 
-const dbFile = ["Fenster.db", "fenster.db"]
+const bundledDbFile = ["Fenster.db", "fenster.db"]
     .map(fileName => path.join(__dirname, fileName))
     .find(filePath => fs.existsSync(filePath)) || path.join(__dirname, "fenster.db");
+const dbFile = process.env.FENSTER_DB_PATH
+    ? path.resolve(process.env.FENSTER_DB_PATH)
+    : bundledDbFile;
+fs.mkdirSync(path.dirname(dbFile), { recursive: true });
 const db = new Database(dbFile);
 
 // --- Tabellen ---
@@ -519,7 +524,69 @@ app.post("/api/reports/window-events/pdf", (req, res) => {
     }
 });
 
-// --- Server starten ---
-app.listen(PORT, () => {
-    console.log(`✅ Server läuft auf http://localhost:${PORT}`);
-});
+function startServer(options = {}) {
+    const port = options.port ?? DEFAULT_PORT;
+    const host = options.host || "127.0.0.1";
+
+    if (server) {
+        const address = server.address();
+        return Promise.resolve({
+            server,
+            host,
+            port: typeof address === "object" && address ? address.port : port
+        });
+    }
+
+    return new Promise((resolve, reject) => {
+        const instance = app.listen(port, host, () => {
+            server = instance;
+            const address = instance.address();
+            const actualPort = typeof address === "object" && address ? address.port : port;
+            console.log(`Server laeuft auf http://${host}:${actualPort}`);
+            resolve({ server: instance, host, port: actualPort });
+        });
+
+        instance.once("error", reject);
+    });
+}
+
+function closeDatabase() {
+    if (db.open) {
+        db.close();
+    }
+}
+
+function stopServer() {
+    return new Promise((resolve, reject) => {
+        if (!server) {
+            closeDatabase();
+            resolve();
+            return;
+        }
+
+        const runningServer = server;
+        server = null;
+        runningServer.close(error => {
+            closeDatabase();
+            if (error) {
+                reject(error);
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
+if (require.main === module) {
+    startServer().catch(error => {
+        console.error("Server konnte nicht gestartet werden:", error);
+        process.exit(1);
+    });
+}
+
+module.exports = {
+    app,
+    startServer,
+    stopServer,
+    dbFile
+};

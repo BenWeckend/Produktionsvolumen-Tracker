@@ -1,18 +1,67 @@
 {
-  "dependencies": {
-    "better-sqlite3": "^12.11.1",
-    "chart.js": "^4.5.1",
-    "express": "^5.2.1",
-    "pdfkit": "^0.15.2"
-  },
-  "name": "button",
+  "name": "fenster-dashboard",
   "version": "1.0.0",
-  "main": "app.js",
+  "description": "Lokales Fenster-Produktionsdashboard als Node.js- und Electron-App.",
+  "main": "electron/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "npm run rebuild:electron && electron .",
+    "electron": "npm run rebuild:electron && electron .",
+    "rebuild:electron": "electron-builder install-app-deps",
+    "rebuild:node": "npm rebuild better-sqlite3",
+    "build": "electron-builder --win",
+    "build:dir": "electron-builder --win dir"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "chart.js": "^4.5.1",
+    "express": "^5.2.1",
+    "pdfkit": "^0.15.2"
+  },
+  "devDependencies": {
+    "electron": "^32.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "de.fenster.dashboard",
+    "productName": "Fenster Dashboard",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "public/**/*",
+      "server.js",
+      "report.js",
+      "package.json",
+      "logo2.png"
+    ],
+    "extraResources": [
+      {
+        "from": "fenster.db",
+        "to": "fenster.db"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "portable": {
+      "artifactName": "Fenster-Dashboard-${version}-${arch}-portable.${ext}"
+    },
+    "nsis": {
+      "artifactName": "Fenster-Dashboard-Setup-${version}-${arch}.${ext}",
+      "oneClick": true,
+      "perMachine": false
+    }
+  }
 }
