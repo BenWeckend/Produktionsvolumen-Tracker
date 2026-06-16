@@ -18,4 +18,42 @@ Logik:
     - Für die letzten 90 Tage
     - Für alle Daten
 
+**Bringup:**
+```
+# 1. PM2 global installieren
+npm install -g pm2
+
+# 2. Server starten
+pm2 start server.js --name fenster
+
+# 3. Status prüfen
+pm2 status
+
+# 4. Logs anzeigen (optional)
+pm2 logs fenster
+
+# 5. Autostart einrichten
+pm2 save
+pm2 startup
+# > Den angezeigten Befehl (z.B. "sudo env ...") kopieren und ausführen
+
+# 6. Server dauerhaft laufen lassen. Terminal kann geschlossen werden!
+```
+
+**Verwaltung:**
+```
+pm2 restart fenster    # Server neu starten (z.B. nach Code-Änderung)
+pm2 stop fenster       # Server stoppen
+pm2 delete fenster     # Server komplett entfernen
+pm2 reload fenster     # Zero-Downtime-Reload (bei Clustermodus)
+```
+
+**Logs & Monitoring:**
+```
+pm2 logs fenster       # Live-Logs anzeigen
+pm2 monit              # CPU/Memory-Überwachung
+pm2 list               # Alle laufenden Prozesse
+```
+
+
 <img width="1920" height="1080" alt="Bildschirmfoto vom 2026-06-16 09-46-47" src="https://github.com/user-attachments/assets/472baa4d-dce7-4485-83bf-fcecfd97bb45" />
