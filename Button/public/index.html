@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>FENSTER // SYSTEM – Produktionslogger</title>
+    
+    <!-- Chart.js & Font Awesome Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="grid">
+        <div class="header">
+            <div class="title"><i class="fas fa-window-maximize"></i> FENSTER // PRODUCTION CORE <i class="fas fa-chart-line"></i></div>
+        </div>
+
+        <!-- 3 Haupt-KPIs -->
+        <div class="main-stats">
+            <div class="stat-card today">
+                <div class="stat-label"><i class="fas fa-sun"></i> TODAY OUTPUT</div>
+                <div class="stat-number" id="todayCount">0</div>
+            </div>
+            <div class="stat-card week">
+                <div class="stat-label"><i class="fas fa-calendar-week"></i> WEEK TOTAL</div>
+                <div class="stat-number" id="weekTotal">0</div>
+            </div>
+            <div class="stat-card month">
+                <div class="stat-label"><i class="fas fa-calendar-alt"></i> MONTH TOTAL</div>
+                <div class="stat-number" id="monthTotal">0</div>
+            </div>
+            <div class="stat-card year">
+                <div class="stat-label"><i class="fas fa-calendar-check"></i> YEAR TOTAL</div>
+                <div class="stat-number" id="yearTotal">0</div>
+            </div>
+        </div>
+
+        <!-- Erste 2‑Spalten‑Reihe: Stundenchart + 7‑Tage‑Trend -->
+        <div class="two-columns">
+            <div class="chart-card">
+                <div class="card-title"><i class="fas fa-chart-bar"></i> STÜNDLICHE PRODUKTION (HEUTE)</div>
+                <div class="chart-wrapper">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        
+            <div class="chart-card">
+                <div class="card-title"><i class="fas fa-chart-line"></i> 7 TAGE TREND</div>
+                <div class="chart-wrapper">
+                    <canvas id="weekChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zweite 2‑Spalten‑Reihe: 30‑Tage‑Trend + Aktionslog -->
+        <div class="two-columns">
+            <div class="chart-card">
+                <div class="card-title"><i class="fas fa-calendar-week"></i> 30 TAGE TREND</div>
+                <div class="chart-wrapper">
+                    <canvas id="monthChart"></canvas>
+                </div>
+            </div>
+
+            <div class="log-section">
+                <div class="log-header">
+                    <i class="fas fa-history fa-fw"></i> <span>LETZTE AKTIONEN</span>
+                    <i class="fas fa-window-maximize" style="margin-left: auto; opacity:0.6;"></i>
+                </div>
+                <ul class="log-list" id="actionLogList">
+                    <li style="justify-content: center; opacity:0.6;"><i class="fas fa-database"></i> Keine Einträge – Fenster produzieren mit [ENTER]</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="controls">
+    <button id="addBtn"><i class="fas fa-window-maximize"></i> FENSTER +</button>
+    <button id="undoBtn"><i class="fas fa-undo-alt"></i> UNDO</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
