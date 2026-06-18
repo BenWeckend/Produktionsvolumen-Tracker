@@ -18,7 +18,13 @@ Logik:
     - Für die letzten 90 Tage
     - Für alle Daten
 
-**Bringup:**
+*Windows Bringup:*
+- Der Auftrag war eine Windows Version zu erstellen, welche ganz einfach mit doppelklick ohne Terminal & Befehl aufgerufen werden kann.
+- Dazu soll der Zielcomputer zu keinem Zeitpunkt (auch beim Setup) mit dem Internet verbungen sein. 😂😅
+    - Aufgrunddessen musste das Project mit Portable Node.js realisiert werden. Die Skripte für das Setup sind unter Button/setup/ zu finden.
+    - Mit einem doppelklick auf start.bat wird automatisch die App gestartet und  localhost:3000 im Browser ausgeführt.
+
+*Linux Bringup:*
 ```
 # 1. PM2 global installieren
 npm install -g pm2
