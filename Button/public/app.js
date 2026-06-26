@@ -1,21 +1,22 @@
 // ----------------------- API-KOMMUNIKATION -----------------------
 
-async function loadDashboard() {
+async function loadDashboard(animate = true) {
     try {
         const response = await fetch("/api/dashboard");
         if (!response.ok) throw new Error("Fehler beim Laden des Dashboards");
         const data = await response.json();
-        updateUI(data);
+        updateUI(data, animate);
     } catch (error) {
         console.error("Dashboard-Fehler:", error);
     }
 }
 
-function updateUI(data) {
+function updateUI(data, animate = true) {
     updateCounters(data);
-    renderWeeklyMonthlyCharts(data);
-    renderHourlyBarChart(data);
-    renderActionLog(data.actionLog);
+    // Weekly and monthly charts are currently hidden in the UI
+    // renderWeeklyMonthlyCharts(data);
+    renderHourlyBarChart(data, animate);
+    renderActionLog(data.actionLog, animate);
 }
 
 // ----------------------- ZEITHELFER (für Log) -----------------------
@@ -184,7 +185,7 @@ function renderWeeklyMonthlyCharts(data) {
     setupChartResize(monthChart);
 }
 
-function renderHourlyBarChart(data) {
+function renderHourlyBarChart(data, animate = true) {
     const hourly = new Array(24).fill(0);
     if (data.hourly) {
         data.hourly.forEach(item => {
@@ -219,6 +220,7 @@ function renderHourlyBarChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: true,
+            animation: animate ? { duration: 400, easing: 'easeOutQuart' } : false,
             plugins: {
                 legend: { display: false },
                 tooltip: { callbacks: { label: (ctx) => `${ctx.raw} Fenster` }, backgroundColor: "#1e2438" }
@@ -234,12 +236,14 @@ function renderHourlyBarChart(data) {
     setupChartResize(hourlyChart);
 }
 
-function renderActionLog(actionLog) {
+function renderActionLog(actionLog, animate = true) {
     const logContainer = document.getElementById("actionLogList");
     if (!logContainer) return;
 
+    const animationClass = animate ? "animate-in" : "";
+
     if (!actionLog || actionLog.length === 0) {
-        logContainer.innerHTML = `<li style="justify-content: center; gap: 8px;"><i class="fas fa-info-circle"></i> Noch keine Aktionen</li>`;
+        logContainer.innerHTML = `<li class="${animationClass}" style="justify-content: center; gap: 8px;"><i class="fas fa-info-circle"></i> Noch keine Aktionen</li>`;
         return;
     }
 
@@ -248,7 +252,7 @@ function renderActionLog(actionLog) {
         const relativeTime = getRelativeTime(entry.timestamp);
         
         if (entry.type === "add") {
-            return `<li>
+            return `<li class="${animationClass}">
                         <i class="fas fa-window-maximize log-icon"></i>
                         <span class="log-time">${timeLabel}</span>
                         <span class="log-text">
@@ -257,7 +261,7 @@ function renderActionLog(actionLog) {
                         </span>
                     </li>`;
         } else if (entry.type === "undo") {
-            return `<li>
+            return `<li class="${animationClass}">
                         <i class="fas fa-undo-alt log-undo-icon"></i>
                         <span class="log-time">${timeLabel}</span>
                         <span class="log-text">
@@ -324,9 +328,9 @@ window.addEventListener('resize', () => {
     if (hourlyChart) hourlyChart.resize();
 });
 
-// ----------------------- INIT & AUTO-UPDATE (alle 1 Stunden) -----------------------
+// ----------------------- INIT & AUTO-UPDATE (alle 1 Minute) -----------------------
 
 loadDashboard();
-setInterval(loadDashboard, 3600000);
+setInterval(() => loadDashboard(false), 1000 * 60);
 
 console.log("🪟 FENSTER SYSTEM AKTIV | Server-API mit UNDO-Log | Auto-Update alle 1h");

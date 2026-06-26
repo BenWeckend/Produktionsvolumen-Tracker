@@ -34,10 +34,20 @@ body {
 }
 
 .title {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
     font-size: clamp(1.2rem, 5vw, 2rem);
     font-weight: 500;
     letter-spacing: 2px;
     color: #cfddee;
+}
+
+.title-logo {
+    width: clamp(120px, 25vw, 300px);
+    height: auto;
+    display: block;
 }
 
 .title i {
@@ -58,9 +68,10 @@ body {
 }
 
 .stat-card {
-    text-align: center;
-    min-width: 140px;
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; /*horizontal alignment*/
 }
 
 .stat-label {
@@ -92,7 +103,7 @@ body {
 .week .stat-number,
 .month .stat-number,
 .year .stat-number {
-    font-size: clamp(2rem, 8vw, 3.5rem);
+    font-size: clamp(4rem, 16vw, 6rem);
     font-weight: 600;
     color: #bdd4ff;
 }
@@ -190,7 +201,10 @@ body {
     border-left: 3px solid #4f9eff;
     font-size: clamp(0.8rem, 2.5vw, 0.95rem);
     flex-wrap: wrap;
-    animation: slideIn 0.25s ease-out;
+}
+
+.log-list li.animate-in {
+    animation: slideIn 0.3s ease-out;
 }
 
 .log-time {
