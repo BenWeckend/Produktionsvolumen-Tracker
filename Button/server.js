@@ -1,5 +1,6 @@
 const express = require("express");
 const Database = require("better-sqlite3");
+const ExcelJS = require("exceljs");
 const path = require("path");
 
 const app = express();
@@ -47,6 +48,12 @@ const deleteLastEvent = db.prepare(`
 const getMaxId = db.prepare(`
     SELECT MAX(id) AS id
     FROM window_events
+`);
+
+const exportEventsStmt = db.prepare(`
+    SELECT id, created_at
+    FROM window_events
+    ORDER BY created_at ASC
 `);
 
 // --- Statements für action_log ---
@@ -172,6 +179,25 @@ app.get("/api/dashboard", (req, res) => {
         yearTotal: yearTotalStmt.get().count,
         weekTotal: weekTotalStmt.get().count
     });
+});
+
+app.get("/api/export-window-events", async (req, res) => {
+    const events = exportEventsStmt.all();
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("window_events");
+
+    sheet.columns = [
+        { header: "id", key: "id", width: 10 },
+        { header: "created_at", key: "created_at", width: 25 }
+    ];
+
+    sheet.addRows(events);
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=window_events.xlsx");
+
+    await workbook.xlsx.write(res);
+    res.end();
 });
 
 // --- Server starten ---

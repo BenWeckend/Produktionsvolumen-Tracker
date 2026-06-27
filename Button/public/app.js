@@ -304,6 +304,10 @@ async function undoWindow() {
     }
 }
 
+function downloadWindowEvents() {
+    window.location.href = "/api/export-window-events";
+}
+
 // ----------------------- EVENT-LISTENER -----------------------
 
 document.addEventListener("keydown", (e) => {
@@ -319,6 +323,7 @@ document.addEventListener("keydown", (e) => {
 
 document.getElementById("addBtn").addEventListener("click", addWindow);
 document.getElementById("undoBtn").addEventListener("click", undoWindow);
+document.getElementById("analysisBtn").addEventListener("click", downloadWindowEvents);
 
 // ----------------------- CHART-RESIZE BEI FENSTERGRÖSSE -----------------------
 
