@@ -62,4 +62,4 @@ pm2 list               # Alle laufenden Prozesse
 ```
 
 
-<img width="1920" height="1080" alt="Bildschirmfoto vom 2026-06-16 09-46-47" src="https://github.com/user-attachments/assets/472baa4d-dce7-4485-83bf-fcecfd97bb45" />
+<img width="3840" height="2160" alt="Bildschirmfoto vom 2026-06-27 15-35-31" src="https://github.com/user-attachments/assets/6b4848e6-e1ca-45d1-866e-7c52f9381477" />
