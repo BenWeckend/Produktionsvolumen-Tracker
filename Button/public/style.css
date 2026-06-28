@@ -31,6 +31,7 @@ body {
     text-align: center;
     padding: clamp(10px, 2vh, 20px) 0;
     border-bottom: 1px solid #2a2e3a;
+    text-align: left;
 }
 
 .title {
@@ -42,6 +43,7 @@ body {
     font-weight: 500;
     letter-spacing: 2px;
     color: #cfddee;
+    
 }
 
 .title-logo {
@@ -55,6 +57,8 @@ body {
     opacity: 0.7;
 }
 
+
+
 /* KPI‑Karten */
 .main-stats {
     display: flex;
@@ -65,6 +69,34 @@ body {
     border: 1px solid #2a2f3c;
     border-radius: clamp(20px, 5vw, 40px);
     padding: clamp(20px, 4vw, 35px) clamp(15px, 3vw, 25px);
+}
+
+/* Gruppe für Einheit + drei Stat-Cards */
+.stats-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.Einheit_Scheiben_pro_Tag .stat-label {
+    text-transform: none;
+    font-size: clamp(0.9rem, 2.2vw, 1rem);
+    color: #9aaec0;
+}
+
+.stats-group-cards {
+    display: flex;
+    gap: clamp(90px, 20vw, 200px);
+    align-items: center;
+    transform: translate(0px, 50px);
+}
+
+@media (max-width: 850px) {
+    .stats-group-cards {
+        flex-direction: column;
+        align-items: center;
+    }
 }
 
 .stat-card {
@@ -361,6 +393,15 @@ button:active,
     .today .stat-number {
         font-size: 3rem;
     }
+}
+
+/* Datum/Uhrzeit im Header */
+#current-date-time {
+    float: right;
+    font-size: clamp(1.5rem, 3vw, 1.8rem);
+    font-weight: 600;
+    color: #cfddee;
+    margin-top: 6px;
 }
 
 /* Animation */

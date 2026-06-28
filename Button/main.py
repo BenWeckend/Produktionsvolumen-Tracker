@@ -16,7 +16,7 @@ DB_PATH = "fenster.db"  # Pfad zur Datenbank (gleiches Verzeichnis)
 # ----------------------------------------
 # Konfiguration
 # ----------------------------------------
-END_DATE = datetime(2026, 6, 16, 17, 40, 0)   # Heute 17:40 Uhr
+END_DATE = datetime(2026, 6, 28, 16, 00, 0)   # Heute 17:40 Uhr
 START_DATE = END_DATE - timedelta(days=180)   # ca. 6 Monate
 
 # Durchschnittliche Fenster pro Tag (realistisch)

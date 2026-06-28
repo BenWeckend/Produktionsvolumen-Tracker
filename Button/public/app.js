@@ -14,9 +14,9 @@ async function loadDashboard(animate = true) {
 function updateUI(data, animate = true) {
     updateCounters(data);
     // Weekly and monthly charts are currently hidden in the UI
-    // renderWeeklyMonthlyCharts(data);
-    renderHourlyBarChart(data, animate);
-    renderActionLog(data.actionLog, animate);
+    renderWeeklyMonthlyCharts(data, animate);
+    //renderHourlyBarChart(data, animate);
+    //renderActionLog(data.actionLog, animate);
 }
 
 // ----------------------- ZEITHELFER (für Log) -----------------------
@@ -66,6 +66,20 @@ let weekChart = null;
 let monthChart = null;
 let hourlyChart = null;
 
+// Register datalabels plugin if available
+try {
+    if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+    }
+} catch (e) {
+    // plugin not available or already registered — ignore
+}
+
+// Globale Chart.js Konfiguration für Animationen
+if (typeof Chart !== 'undefined') {
+    Chart.defaults.animation = false;
+}
+
 function setupChartResize(chart) {
     if (!chart) return;
     const resizeObserver = new ResizeObserver(() => {
@@ -87,18 +101,25 @@ function updateCounters(data) {
     document.getElementById("yearTotal").innerText = data.yearTotal || 0;
 }
 
-function renderWeeklyMonthlyCharts(data) {
-    // ---- 7-Tage-Trend ----
+function renderWeeklyMonthlyCharts(data, animate = true) {
+    // ---- 14-Tage-Trend (Balkendiagramm) ----
     const today = new Date();
     const weekLabels = [];
     const weekCounts = [];
     const weekMap = {};
+    // Fallback: wenn `weekTrend` nur wenige Tage liefert, befüllen wir die Map
+    // aus `monthTrend` (falls vorhanden) und überschreiben mit `weekTrend`-Werten.
+    if (data.monthTrend) {
+        data.monthTrend.forEach(item => {
+            weekMap[item.day] = item.count;
+        });
+    }
     if (data.weekTrend) {
         data.weekTrend.forEach(item => {
             weekMap[item.day] = item.count;
         });
     }
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 13; i >= 0; i--) {
         const d = new Date();
         d.setDate(today.getDate() - i);
         const label = d.toLocaleDateString("de", { weekday: "short", day: "numeric" });
@@ -109,31 +130,43 @@ function renderWeeklyMonthlyCharts(data) {
 
     if (weekChart) weekChart.destroy();
     weekChart = new Chart(document.getElementById("weekChart"), {
-        type: "line",
+        type: "bar",
         data: {
             labels: weekLabels,
             datasets: [{
                 label: "Fenster pro Tag",
                 data: weekCounts,
-                borderColor: "#4f9eff",
-                backgroundColor: "rgba(79,158,255,0.04)",
-                tension: 0.3,
-                pointBackgroundColor: "#bdd4ff",
-                pointBorderColor: "#ffffff",
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                fill: true
+                backgroundColor: "rgba(79, 158, 255, 0.65)",
+                borderColor: "#d0e2ff",
+                borderWidth: 1,
+                borderRadius: 0.6,
+                barPercentage: 0.8
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            //animation: animate ? { duration: 400, easing: 'easeOutQuart' } : { duration: 0 },
+            //animations: animate ? { x: { duration: 400, easing: 'easeOutQuart' }, y: { duration: 400, easing: 'easeOutQuart' } } : { x: { duration: 0 }, y: { duration: 0 } },
             plugins: { 
-                legend: { display: false }, 
-                tooltip: { backgroundColor: "#1e2438", titleColor: "#e0eaff", bodyColor: "#cfdeef" } 
+                legend: { display: false },
+                tooltip: { callbacks: { label: (ctx) => `${ctx.raw} Fenster` }, backgroundColor: "#1e2438", titleColor: "#e0eaff", bodyColor: "#cfdeef" },
+                datalabels: {
+                    color: '#e0eaff',
+                    anchor: 'end',
+                    align: 'end',
+                    offset: -6,
+                    font: { weight: '700', size: 24 },
+                    formatter: function(value) { return value; }
+                }
+            },
+            layout: {
+                padding: {
+                    top: 30
+                }
             },
             scales: { 
-                x: { ticks: { color: "#9aaec0", maxRotation: 45 } }, 
+                x: { ticks: { color: "#9aaec0", maxRotation: 45, autoSkip: true, maxTicksLimit: 14 } }, 
                 y: { ticks: { color: "#9aaec0", stepSize: 1, beginAtZero: true } } 
             }
         }
@@ -285,7 +318,7 @@ async function addWindow() {
         setTimeout(() => { btn.style.transform = ""; }, 120);
         
         await fetch("/api/window", { method: "POST" });
-        await loadDashboard();
+        await loadDashboard(true);
     } catch (error) {
         console.error("Fehler beim Hinzufügen:", error);
     }
@@ -298,7 +331,7 @@ async function undoWindow() {
         setTimeout(() => { undoBtn.style.transform = ""; }, 120);
         
         await fetch("/api/window/last", { method: "DELETE" });
-        await loadDashboard();
+        await loadDashboard(true);
     } catch (error) {
         console.error("Fehler beim Rückgängig:", error);
     }
@@ -333,9 +366,9 @@ window.addEventListener('resize', () => {
     if (hourlyChart) hourlyChart.resize();
 });
 
-// ----------------------- INIT & AUTO-UPDATE (alle 1 Minute) -----------------------
+// ----------------------- INIT & AUTO-UPDATE (alle 60 Sekunde) -----------------------
 
-loadDashboard();
+loadDashboard(true);
 setInterval(() => loadDashboard(false), 1000 * 60);
 
-console.log("🪟 FENSTER SYSTEM AKTIV | Server-API mit UNDO-Log | Auto-Update alle 1h");
+console.log("🪟 FENSTER SYSTEM AKTIV | Server-API mit UNDO-Log | Auto-Update alle 60s");
