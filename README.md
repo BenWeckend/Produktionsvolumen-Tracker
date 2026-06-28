@@ -20,7 +20,7 @@ Logik:
 
 *Windows Bringup: (Branch: WinDev_portable)*
 - Der Auftrag war eine Windows Version zu erstellen, welche ganz einfach mit doppelklick ohne Terminal & Befehl aufgerufen werden kann.
-- Dazu soll der Zielcomputer zu keinem Zeitpunkt (auch beim Setup) mit dem Internet verbungen sein. 😂😅
+- Dazu soll der Zielcomputer zu keinem Zeitpunkt (auch beim Setup) mit dem Internet verbungen sein. 😅
     - Aufgrunddessen musste das Project mit Portable Node.js realisiert werden. Die Skripte für das Setup sind unter Button/setup/ zu finden.
     - Mit einem doppelklick auf start.bat wird automatisch die App gestartet und  localhost:3000 im Browser ausgeführt.
 
@@ -62,4 +62,4 @@ pm2 list               # Alle laufenden Prozesse
 ```
 
 
-<img width="1920" height="1080" alt="Bildschirmfoto vom 2026-06-16 09-46-47" src="https://github.com/user-attachments/assets/472baa4d-dce7-4485-83bf-fcecfd97bb45" />
+<img width="3840" height="2160" alt="Bildschirmfoto vom 2026-06-27 15-35-31" src="https://github.com/user-attachments/assets/6b4848e6-e1ca-45d1-866e-7c52f9381477" />
