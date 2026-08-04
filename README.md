@@ -1,4 +1,4 @@
-# Fenster
+# Dashboard
 
 Das Ziel ist für ein Fensterbauunternehmen einen Tracker zu bauen, welcher die Anzahl an produzierten Fenster loggt.
 
